@@ -39,7 +39,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push Docker image
         uses: docker/build-push-action@v3
         with:
@@ -51,7 +51,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
           script: |
             docker pull ghcr.io/${{ github.repository }}:${{ github.sha }}
             docker stop my-fastapi-container || true
