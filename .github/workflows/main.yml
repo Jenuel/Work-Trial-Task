@@ -10,8 +10,23 @@ on:
 
 jobs:
   test:
-    name: Run Tests
+    name: Run Unit & Database Tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: test_db
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U test_user"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -24,15 +39,22 @@ jobs:
       - name: Install Dependencies
         run: |
           pip install -r requirements.txt
+          pip install pytest pytest-mock
 
-      - name: Run Tests
+      - name: Run Unit Tests (Mocked DB)
         run: |
-          pytest  # Ensure you have tests in your repo
+          pytest -v --disable-warnings
+
+      - name: Run Database Tests
+        env:
+          DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/test_db
+        run: |
+          pytest -v --disable-warnings
 
   build-and-deploy:
     name: Build and Deploy
     runs-on: ubuntu-latest
-    needs: test  
+    needs: test  # Only runs if tests pass
 
     steps:
       - name: Checkout Code
