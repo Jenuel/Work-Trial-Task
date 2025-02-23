@@ -1,13 +1,13 @@
 from fastapi.testclient import TestClient
 from unittest.mock import patch
-from main import app 
+from app.main import app
 from schemas import OrderResponse
 
 client = TestClient(app)
 
 def test_create_order():
     """Test order creation (route functionality)"""
-    with patch("main.db.add") as mock_add, patch("main.db.commit") as mock_commit, patch("main.db.refresh") as mock_refresh:
+    with patch("app.main.db.add") as mock_add, patch("app.main.db.commit") as mock_commit, patch("app.main.db.refresh") as mock_refresh:
         response = client.post(
             "/orders/",
             json={"symbol": "AAPL", "price": 150.0, "quantity": 10, "order_type": "buy"},
@@ -32,7 +32,7 @@ def test_get_orders():
         OrderResponse(id=2, symbol="GOOG", price=2500.0, quantity=5, order_type="sell"),
     ]
 
-    with patch("main.db.query") as mock_query:
+    with patch("app.main.db.query") as mock_query:
         mock_query.return_value.all.return_value = fake_orders
 
         response = client.get("/orders/")
