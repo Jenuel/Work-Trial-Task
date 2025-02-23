@@ -8,6 +8,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+#GET /orders/ - Fetch all orders
 @app.get("/orders/", response_model=list[OrderResponse])
 def get_orders(db: Session = Depends(get_db)):
     return db.query(Order).all()
