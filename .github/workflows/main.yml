@@ -1,0 +1,70 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Tests
+        run: |
+          pytest  # Ensure you have tests in your repo
+
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    needs: test  
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build Docker Image
+        run: |
+          docker build -t fastapi-app .
+          docker tag fastapi-app ghcr.io/${{ github.repository }}/fastapi-app:latest
+
+      - name: Push Docker Image
+        run: |
+          docker push ghcr.io/${{ github.repository }}/fastapi-app:latest
+
+      - name: SSH into EC2 and Deploy
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Pulling latest image from GitHub Container Registry..."
+            docker pull ghcr.io/${{ github.repository }}/fastapi-app:latest
+
+            echo "Stopping and removing old container..."
+            docker stop fastapi-container || true
+            docker rm fastapi-container || true
+
+            echo "Running new container..."
+            docker run -d --name fastapi-container -p 8000:8000 --env-file .env ghcr.io/${{ github.repository }}/fastapi-app:latest
+
+            echo "Deployment complete!"
